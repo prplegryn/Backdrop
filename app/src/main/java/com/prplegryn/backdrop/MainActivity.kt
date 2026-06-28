@@ -56,7 +56,6 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.isSpecified
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.input.pointer.consume
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -306,8 +305,7 @@ private fun PreviewPanel(
             .clip(RoundedCornerShape(28.dp))
             .border(1.dp, Hairline, RoundedCornerShape(28.dp))
             .pointerInput(state) {
-                detectDragGestures { change, dragAmount ->
-                    change.consume()
+                detectDragGestures { _, dragAmount ->
                     state.backgroundOffset += dragAmount
                 }
             }
@@ -373,7 +371,7 @@ private fun MovableBackground(
 
 @Composable
 private fun PreviewBackdropContent(accent: Color) {
-    Canvas(Modifier.matchParentSize()) {
+    Canvas(Modifier.fillMaxSize()) {
         drawRect(Color.White.copy(alpha = 0.08f))
         drawCircle(
             color = accent.copy(alpha = 0.22f),
@@ -562,7 +560,6 @@ private fun DemoSlider(
             }
             .pointerInput(Unit) {
                 detectDragGestures { change, _ ->
-                    change.consume()
                     value = (change.position.x / size.width.toFloat()).coerceIn(0f, 1f)
                 }
             },
@@ -1064,7 +1061,6 @@ private fun ParamSlider(
                 }
                 .pointerInput(range) {
                     detectDragGestures { change, _ ->
-                        change.consume()
                         val width = size.width.toFloat().coerceAtLeast(1f)
                         val next = range.start + (range.endInclusive - range.start) * (change.position.x / width)
                         onValueChange(next.coerceIn(range))
