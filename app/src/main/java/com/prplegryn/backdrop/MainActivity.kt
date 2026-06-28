@@ -79,6 +79,11 @@ import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.colorControls
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.shadow.Shadow
+import com.prplegryn.backdrop.components.LiquidBottomTab
+import com.prplegryn.backdrop.components.LiquidBottomTabs
+import com.prplegryn.backdrop.components.LiquidButton
+import com.prplegryn.backdrop.components.LiquidSlider
+import com.prplegryn.backdrop.components.LiquidToggle
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -335,17 +340,15 @@ private fun PreviewPanel(
             )
         }
 
-        Box(
-            Modifier
+        AppText(
+            text = spec.subtitle,
+            size = 12,
+            weight = FontWeight.Medium,
+            color = Ink,
+            modifier = Modifier
                 .align(Alignment.TopStart)
-                .padding(18.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(Color.White.copy(alpha = 0.58f))
-                .border(1.dp, Color.White.copy(alpha = 0.55f), RoundedCornerShape(999.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-        ) {
-            AppText(spec.subtitle, size = 12, weight = FontWeight.Medium, color = Ink)
-        }
+                .padding(20.dp)
+        )
     }
 }
 
@@ -404,38 +407,15 @@ private fun ShowcaseControl(
     backdrop: Backdrop
 ) {
     when (spec.kind) {
-        ControlKind.Button -> DemoButton(
-            label = "Liquid Button",
-            backdrop = backdrop,
-            params = params,
-            accent = spec.accent
-        )
+        ControlKind.Button -> OfficialButtons(backdrop = backdrop, params = params)
 
-        ControlKind.TintedButton -> DemoButton(
-            label = "Primary Action",
-            backdrop = backdrop,
-            params = params,
-            accent = spec.accent,
-            tinted = true
-        )
+        ControlKind.TintedButton -> OfficialTintedButtons(backdrop = backdrop, params = params)
 
-        ControlKind.Toggle -> DemoToggle(
-            backdrop = backdrop,
-            params = params,
-            accent = spec.accent
-        )
+        ControlKind.Toggle -> OfficialToggle(backdrop = backdrop, params = params)
 
-        ControlKind.Slider -> DemoSlider(
-            backdrop = backdrop,
-            params = params,
-            accent = spec.accent
-        )
+        ControlKind.Slider -> OfficialSlider(backdrop = backdrop, params = params)
 
-        ControlKind.BottomTabs -> DemoBottomTabs(
-            backdrop = backdrop,
-            params = params,
-            accent = spec.accent
-        )
+        ControlKind.BottomTabs -> OfficialBottomTabs(backdrop = backdrop, params = params)
 
         ControlKind.BottomBar -> DemoBottomBar(
             backdrop = backdrop,
@@ -459,6 +439,127 @@ private fun ShowcaseControl(
             backdrop = backdrop,
             params = params
         )
+    }
+}
+
+@Composable
+private fun OfficialButtons(backdrop: Backdrop, params: GlassParams) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        LiquidButton(
+            {},
+            backdrop,
+            blurRadius = params.blur,
+            lensHeight = params.lensHeight,
+            lensAmount = params.lensAmount
+        ) {
+            AppText("Transparent Liquid Button", size = 15, color = Ink)
+        }
+        LiquidButton(
+            {},
+            backdrop,
+            surfaceColor = Color.White.copy(alpha = params.surfaceAlpha),
+            blurRadius = params.blur,
+            lensHeight = params.lensHeight,
+            lensAmount = params.lensAmount
+        ) {
+            AppText("Surface Liquid Button", size = 15, color = Ink)
+        }
+    }
+}
+
+@Composable
+private fun OfficialTintedButtons(backdrop: Backdrop, params: GlassParams) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        LiquidButton(
+            {},
+            backdrop,
+            tint = Color(0xFF0088FF),
+            blurRadius = params.blur,
+            lensHeight = params.lensHeight,
+            lensAmount = params.lensAmount,
+            tintAlpha = params.tintAlpha
+        ) {
+            AppText("Tinted Liquid Button", size = 15, color = Color.White)
+        }
+        LiquidButton(
+            {},
+            backdrop,
+            tint = Color(0xFFFF8D28),
+            blurRadius = params.blur,
+            lensHeight = params.lensHeight,
+            lensAmount = params.lensAmount,
+            tintAlpha = params.tintAlpha
+        ) {
+            AppText("Tinted Liquid Button", size = 15, color = Color.White)
+        }
+    }
+}
+
+@Composable
+private fun OfficialToggle(backdrop: Backdrop, params: GlassParams) {
+    var selected by rememberSaveable { mutableStateOf(false) }
+    LiquidToggle(
+        selected = { selected },
+        onSelect = { selected = it },
+        backdrop = backdrop,
+        modifier = Modifier.padding(horizontal = 32.dp),
+        blurRadius = params.blur,
+        lensHeight = params.lensHeight,
+        lensAmount = params.lensAmount,
+        surfaceAlpha = params.surfaceAlpha,
+        chromaticAberration = params.chromaticAberration
+    )
+}
+
+@Composable
+private fun OfficialSlider(backdrop: Backdrop, params: GlassParams) {
+    var value by rememberSaveable { mutableFloatStateOf(50f) }
+    LiquidSlider(
+        value = { value },
+        onValueChange = { value = it },
+        valueRange = 0f..100f,
+        visibilityThreshold = 0.01f,
+        backdrop = backdrop,
+        modifier = Modifier.padding(horizontal = 32.dp),
+        blurRadius = params.blur,
+        lensHeight = params.lensHeight,
+        lensAmount = params.lensAmount,
+        surfaceAlpha = params.surfaceAlpha,
+        chromaticAberration = params.chromaticAberration
+    )
+}
+
+@Composable
+private fun OfficialBottomTabs(backdrop: Backdrop, params: GlassParams) {
+    var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+    LiquidBottomTabs(
+        selectedTabIndex = { selectedTabIndex },
+        onTabSelected = { selectedTabIndex = it },
+        backdrop = backdrop,
+        tabsCount = 3,
+        modifier = Modifier
+            .widthIn(max = 430.dp)
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp),
+        blurRadius = params.blur,
+        containerLensHeight = params.lensHeight,
+        containerLensAmount = params.lensAmount,
+        selectorLensHeight = (params.lensHeight * 10f / 24f).coerceAtLeast(0f),
+        selectorLensAmount = (params.lensAmount * 14f / 24f).coerceAtLeast(0f),
+        surfaceAlpha = params.surfaceAlpha,
+        chromaticAberration = params.chromaticAberration
+    ) {
+        repeat(3) { index ->
+            LiquidBottomTab({ selectedTabIndex = index }) {
+                AppText("Tab ${index + 1}", size = 12, color = Ink)
+            }
+        }
     }
 }
 
@@ -908,15 +1009,27 @@ private fun ParameterPanel(
                 AppText(spec.title, size = 19, weight = FontWeight.SemiBold, color = Ink)
                 AppText(spec.subtitle, size = 12, color = MutedInk)
             }
-            PillButton(
-                label = if (copied) "Copied" else "Copy",
-                selected = copied,
-                accent = spec.accent,
-                onClick = {
-                    clipboard.setText(AnnotatedString(codeFor(spec, state.params)))
-                    copied = true
-                }
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PillButton(
+                    label = "Reset",
+                    selected = false,
+                    accent = spec.accent,
+                    onClick = {
+                        state.params = spec.defaultParams
+                        state.backgroundIndex = spec.defaultBackground
+                        state.backgroundOffset = Offset.Zero
+                    }
+                )
+                PillButton(
+                    label = if (copied) "Copied" else "Copy",
+                    selected = copied,
+                    accent = spec.accent,
+                    onClick = {
+                        clipboard.setText(AnnotatedString(codeFor(spec, state.params)))
+                        copied = true
+                    }
+                )
+            }
         }
 
         SectionLabel("Background")
@@ -1014,18 +1127,6 @@ private fun ParameterPanel(
             }
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PillButton(
-                label = "Reset",
-                selected = false,
-                accent = spec.accent,
-                onClick = {
-                    state.params = spec.defaultParams
-                    state.backgroundIndex = spec.defaultBackground
-                    state.backgroundOffset = Offset.Zero
-                }
-            )
-        }
     }
 }
 
@@ -1052,24 +1153,33 @@ private fun ParamSlider(
                 .fillMaxWidth()
                 .height(28.dp)
                 .pointerInput(range) {
+                    val thumbRadiusPx = 9.dp.toPx()
                     fun update(x: Float) {
-                        val width = size.width.toFloat().coerceAtLeast(1f)
-                        val next = range.start + (range.endInclusive - range.start) * (x / width)
+                        val trackWidth = (size.width.toFloat() - thumbRadiusPx * 2f).coerceAtLeast(1f)
+                        val fraction = ((x - thumbRadiusPx) / trackWidth).coerceIn(0f, 1f)
+                        val next = range.start + (range.endInclusive - range.start) * fraction
                         onValueChange(next.coerceIn(range))
                     }
                     detectTapGestures { offset -> update(offset.x) }
                 }
                 .pointerInput(range) {
+                    val thumbRadiusPx = 9.dp.toPx()
                     detectDragGestures { change, _ ->
-                        val width = size.width.toFloat().coerceAtLeast(1f)
-                        val next = range.start + (range.endInclusive - range.start) * (change.position.x / width)
+                        val trackWidth = (size.width.toFloat() - thumbRadiusPx * 2f).coerceAtLeast(1f)
+                        val fraction = ((change.position.x - thumbRadiusPx) / trackWidth).coerceIn(0f, 1f)
+                        val next = range.start + (range.endInclusive - range.start) * fraction
                         onValueChange(next.coerceIn(range))
                     }
                 },
             contentAlignment = Alignment.Center
         ) {
             val fraction = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
-            Canvas(Modifier.fillMaxWidth().height(6.dp)) {
+            Canvas(
+                Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .padding(horizontal = 9.dp)
+            ) {
                 val radius = size.height / 2f
                 drawRoundRect(
                     color = Color.Black.copy(alpha = 0.12f),
@@ -1084,8 +1194,10 @@ private fun ParamSlider(
             Box(
                 Modifier
                     .offset {
-                        val x = (constraints.maxWidth * fraction).roundToInt() - 9.dp.roundToPx()
-                        IntOffset(x.coerceIn(0, constraints.maxWidth - 18.dp.roundToPx()), 0)
+                        val thumb = 18.dp.roundToPx()
+                        val trackWidth = (constraints.maxWidth - thumb).coerceAtLeast(1)
+                        val x = (trackWidth * fraction).roundToInt()
+                        IntOffset(x.coerceIn(0, trackWidth), 0)
                     }
                     .size(18.dp)
                     .clip(RoundedCornerShape(999.dp))
@@ -1248,7 +1360,7 @@ private fun controlSpecs(): List<ControlSpec> {
         blur = 2f,
         lensHeight = 12f,
         lensAmount = 24f,
-        surfaceAlpha = 0.50f,
+        surfaceAlpha = 0.30f,
         tintAlpha = 0.0f,
         corner = 28f,
         shadowAlpha = 0.08f,
@@ -1270,7 +1382,7 @@ private fun controlSpecs(): List<ControlSpec> {
         blur = 8f,
         lensHeight = 10f,
         lensAmount = 14f,
-        surfaceAlpha = 0.72f,
+        surfaceAlpha = 1f,
         tintAlpha = 0.36f,
         corner = 24f,
         shadowAlpha = 0.06f,
@@ -1281,9 +1393,9 @@ private fun controlSpecs(): List<ControlSpec> {
     return listOf(
         ControlSpec("button", "Button", "LiquidButton standard", ControlKind.Button, Blue, button, 0),
         ControlSpec("tinted", "Tinted", "Hue blended button", ControlKind.TintedButton, Color(0xFF8A5CFF), button.copy(tintAlpha = 0.75f), 1),
-        ControlSpec("toggle", "Toggle", "LiquidToggle standard", ControlKind.Toggle, Green, control, 1),
+        ControlSpec("toggle", "Toggle", "LiquidToggle standard", ControlKind.Toggle, Green, control.copy(lensHeight = 5f, lensAmount = 10f), 1),
         ControlSpec("slider", "Slider", "LiquidSlider standard", ControlKind.Slider, Blue, control, 0),
-        ControlSpec("tabs", "Tabs", "LiquidBottomTabs standard", ControlKind.BottomTabs, Blue, bar.copy(blur = 8f, lensHeight = 24f, lensAmount = 24f), 2),
+        ControlSpec("tabs", "Tabs", "LiquidBottomTabs standard", ControlKind.BottomTabs, Blue, bar.copy(blur = 8f, lensHeight = 24f, lensAmount = 24f, surfaceAlpha = 0.4f), 2),
         ControlSpec("bar", "Bottom Bar", "Glass bottom bar", ControlKind.BottomBar, Blue, bar, 2),
         ControlSpec("sheet", "Sheet", "Glass bottom sheet", ControlKind.BottomSheet, Coral, bar.copy(lensHeight = 24f, lensAmount = 48f, corner = 44f), 1),
         ControlSpec("dialog", "Dialog", "Floating glass panel", ControlKind.Dialog, Color(0xFF111111), button.copy(blur = 6f, lensHeight = 18f, lensAmount = 30f, corner = 34f), 0),
@@ -1310,85 +1422,116 @@ private fun codeFor(spec: ControlSpec, params: GlassParams): String {
         else -> "Color.Unspecified"
     }
     val body = when (spec.kind) {
-        ControlKind.Button, ControlKind.TintedButton -> """
-Row(
-    Modifier
-        .drawBackdrop(
-            backdrop = backdrop,
-            shape = { $shape },
-            effects = { ${params.effectCode()} },
-            shadow = { Shadow(radius = 22f.dp, color = Color.Black.copy(alpha = ${params.shadowAlpha.clean()}f)) },
-            onDrawSurface = { ${params.surfaceCode(tint)} }
-        )
-        .height(56f.dp)
-        .padding(horizontal = 20f.dp),
-    verticalAlignment = Alignment.CenterVertically
+        ControlKind.Button -> """
+Column(
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(16f.dp)
 ) {
-    Text("${if (spec.kind == ControlKind.TintedButton) "Primary Action" else "Liquid Button"}")
+    LiquidButton(
+        {},
+        backdrop,
+        blurRadius = ${params.blur.clean()}f,
+        lensHeight = ${params.lensHeight.clean()}f,
+        lensAmount = ${params.lensAmount.clean()}f
+    ) {
+        BasicText("Transparent Liquid Button", style = TextStyle(Color.Black, 15f.sp))
+    }
+    LiquidButton(
+        {},
+        backdrop,
+        surfaceColor = Color.White.copy(${params.surfaceAlpha.clean()}f),
+        blurRadius = ${params.blur.clean()}f,
+        lensHeight = ${params.lensHeight.clean()}f,
+        lensAmount = ${params.lensAmount.clean()}f
+    ) {
+        BasicText("Surface Liquid Button", style = TextStyle(Color.Black, 15f.sp))
+    }
+}
+""".trimIndent()
+
+        ControlKind.TintedButton -> """
+Column(
+    horizontalAlignment = Alignment.CenterHorizontally,
+    verticalArrangement = Arrangement.spacedBy(16f.dp)
+) {
+    LiquidButton(
+        {},
+        backdrop,
+        tint = Color(0xFF0088FF),
+        blurRadius = ${params.blur.clean()}f,
+        lensHeight = ${params.lensHeight.clean()}f,
+        lensAmount = ${params.lensAmount.clean()}f,
+        tintAlpha = ${params.tintAlpha.clean()}f
+    ) {
+        BasicText("Tinted Liquid Button", style = TextStyle(Color.White, 15f.sp))
+    }
+    LiquidButton(
+        {},
+        backdrop,
+        tint = Color(0xFFFF8D28),
+        blurRadius = ${params.blur.clean()}f,
+        lensHeight = ${params.lensHeight.clean()}f,
+        lensAmount = ${params.lensAmount.clean()}f,
+        tintAlpha = ${params.tintAlpha.clean()}f
+    ) {
+        BasicText("Tinted Liquid Button", style = TextStyle(Color.White, 15f.sp))
+    }
 }
 """.trimIndent()
 
         ControlKind.Toggle -> """
-Box(
-    Modifier
-        .drawBackdrop(
-            backdrop = backdrop,
-            shape = { $shape },
-            effects = { ${params.effectCode()} },
-            onDrawSurface = { ${params.surfaceCode(tint)} }
-        )
-        .size(86f.dp, 46f.dp)
-) {
-    Box(
-        Modifier
-            .align(Alignment.CenterEnd)
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedCornerShape(percent = 50) },
-                effects = {
-                    blur(8f.dp.toPx())
-                    lens(${(params.lensHeight * 0.45f).clean()}f.dp.toPx(), ${(params.lensAmount * 0.45f).clean()}f.dp.toPx())
-                },
-                onDrawSurface = { drawRect(Color.White.copy(alpha = 0.92f)) }
-            )
-            .size(36f.dp)
-    )
-}
+var selected by rememberSaveable { mutableStateOf(false) }
+LiquidToggle(
+    selected = { selected },
+    onSelect = { selected = it },
+    backdrop = backdrop,
+    modifier = Modifier.padding(horizontal = 32f.dp),
+    blurRadius = ${params.blur.clean()}f,
+    lensHeight = ${params.lensHeight.clean()}f,
+    lensAmount = ${params.lensAmount.clean()}f,
+    surfaceAlpha = ${params.surfaceAlpha.clean()}f,
+    chromaticAberration = ${params.chromaticAberration}
+)
 """.trimIndent()
 
         ControlKind.Slider -> """
-Box(Modifier.height(74f.dp), contentAlignment = Alignment.CenterStart) {
-    Box(Modifier.fillMaxWidth().height(6f.dp).background(Color(0x33000000), RoundedCornerShape(percent = 50)))
-    Box(
-        Modifier
-            .offset(x = 220f.dp)
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { $shape },
-                effects = { ${params.effectCode()} },
-                onDrawSurface = { ${params.surfaceCode(tint)} }
-            )
-            .size(52f.dp, 32f.dp)
-    )
-}
+var value by rememberSaveable { mutableFloatStateOf(50f) }
+LiquidSlider(
+    value = { value },
+    onValueChange = { value = it },
+    valueRange = 0f..100f,
+    visibilityThreshold = 0.01f,
+    backdrop = backdrop,
+    modifier = Modifier.padding(horizontal = 32f.dp),
+    blurRadius = ${params.blur.clean()}f,
+    lensHeight = ${params.lensHeight.clean()}f,
+    lensAmount = ${params.lensAmount.clean()}f,
+    surfaceAlpha = ${params.surfaceAlpha.clean()}f,
+    chromaticAberration = ${params.chromaticAberration}
+)
 """.trimIndent()
 
         ControlKind.BottomTabs -> """
-Row(
-    Modifier
-        .drawBackdrop(
-            backdrop = backdrop,
-            shape = { $shape },
-            effects = { ${params.effectCode()} },
-            onDrawSurface = { ${params.surfaceCode(tint)} }
-        )
-        .height(74f.dp)
-        .fillMaxWidth()
-        .padding(6f.dp)
+var selectedTabIndex by rememberSaveable { mutableIntStateOf(0) }
+LiquidBottomTabs(
+    selectedTabIndex = { selectedTabIndex },
+    onTabSelected = { selectedTabIndex = it },
+    backdrop = backdrop,
+    tabsCount = 3,
+    modifier = Modifier.padding(horizontal = 36f.dp),
+    blurRadius = ${params.blur.clean()}f,
+    containerLensHeight = ${params.lensHeight.clean()}f,
+    containerLensAmount = ${params.lensAmount.clean()}f,
+    selectorLensHeight = ${(params.lensHeight * 10f / 24f).clean()}f,
+    selectorLensAmount = ${(params.lensAmount * 14f / 24f).clean()}f,
+    surfaceAlpha = ${params.surfaceAlpha.clean()}f,
+    chromaticAberration = ${params.chromaticAberration}
 ) {
-    LiquidBottomTab("Home")
-    LiquidBottomTab("Glass")
-    LiquidBottomTab("Code")
+    repeat(3) { index ->
+        LiquidBottomTab({ selectedTabIndex = index }) {
+            BasicText("Tab ${'$'}{index + 1}", style = TextStyle(Color.Black, 12f.sp))
+        }
+    }
 }
 """.trimIndent()
 
