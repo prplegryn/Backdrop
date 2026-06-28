@@ -1,0 +1,2 @@
+-keep class com.kyant.backdrop.** { *; }
+-dontwarn org.jetbrains.skia.**
