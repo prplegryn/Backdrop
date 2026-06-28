@@ -3,7 +3,6 @@ package com.prplegryn.backdrop.utils
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.MutatorMutex
-import androidx.compose.runtime.awaitFrame
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -14,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import kotlin.math.abs
 
 class DampedDragAnimation(
@@ -92,7 +92,7 @@ class DampedDragAnimation(
 
     fun release() {
         animationScope.launch {
-            awaitFrame()
+            yield()
             if (value != targetValue) {
                 val threshold = (valueRange.endInclusive - valueRange.start) * 0.025f
                 snapshotFlow { valueAnimation.value }
