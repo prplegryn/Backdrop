@@ -85,6 +85,7 @@ import com.prplegryn.backdrop.components.LiquidButton
 import com.prplegryn.backdrop.components.LiquidSlider
 import com.prplegryn.backdrop.components.LiquidToggle
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 class MainActivity : ComponentActivity() {
@@ -112,6 +113,24 @@ private enum class ControlKind {
     Dialog,
     Magnifier
 }
+
+private enum class ParamKey {
+    Blur,
+    LensHeight,
+    LensAmount,
+    Surface,
+    Tint,
+    Corner,
+    Shadow,
+    Saturation
+}
+
+private data class ParamSpec(
+    val key: ParamKey,
+    val label: String,
+    val range: ClosedFloatingPointRange<Float>,
+    val suffix: String
+)
 
 private data class GlassParams(
     val blur: Float,
@@ -232,7 +251,7 @@ private fun BackdropGalleryApp() {
                     backgrounds = backgrounds,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 330.dp)
+                        .heightIn(min = 320.dp, max = 440.dp)
                 )
             }
         }
@@ -983,6 +1002,7 @@ private fun ParameterPanel(
 ) {
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
+    val activeParams = remember(spec.kind) { activeParamSpecs(spec.kind) }
 
     LaunchedEffect(copied) {
         if (copied) {
@@ -996,23 +1016,26 @@ private fun ParameterPanel(
             .clip(RoundedCornerShape(24.dp))
             .background(Panel)
             .border(1.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(24.dp))
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(end = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 AppText(spec.title, size = 19, weight = FontWeight.SemiBold, color = Ink)
                 AppText(spec.subtitle, size = 12, color = MutedInk)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PillButton(
+                PanelActionButton(
                     label = "Reset",
-                    selected = false,
                     accent = spec.accent,
                     onClick = {
                         state.params = spec.defaultParams
@@ -1020,10 +1043,10 @@ private fun ParameterPanel(
                         state.backgroundOffset = Offset.Zero
                     }
                 )
-                PillButton(
+                PanelActionButton(
                     label = if (copied) "Copied" else "Copy",
-                    selected = copied,
                     accent = spec.accent,
+                    selected = copied,
                     onClick = {
                         clipboard.setText(AnnotatedString(codeFor(spec, state.params)))
                         copied = true
@@ -1032,101 +1055,79 @@ private fun ParameterPanel(
             }
         }
 
-        SectionLabel("Background")
-        Row(
+        Column(
             Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                .weight(1f)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            backgrounds.forEachIndexed { index, background ->
-                PillButton(
-                    label = background.name,
-                    selected = index == state.backgroundIndex,
-                    accent = spec.accent,
-                    onClick = {
-                        state.backgroundIndex = index
-                        state.backgroundOffset = Offset.Zero
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                SectionHeader("Background")
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    backgrounds.forEachIndexed { index, background ->
+                        PillButton(
+                            label = background.name,
+                            selected = index == state.backgroundIndex,
+                            accent = spec.accent,
+                            onClick = {
+                                state.backgroundIndex = index
+                                state.backgroundOffset = Offset.Zero
+                            }
+                        )
                     }
-                )
+                    PanelActionButton(
+                        label = "Center",
+                        accent = spec.accent,
+                        onClick = { state.backgroundOffset = Offset.Zero }
+                    )
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                SectionHeader("Parameters")
+                activeParams.forEach { param ->
+                    ParamSlider(
+                        label = param.label,
+                        value = state.params.valueOf(param.key),
+                        defaultValue = spec.defaultParams.valueOf(param.key),
+                        range = param.range,
+                        suffix = param.suffix,
+                        accent = spec.accent,
+                        onValueChange = { value ->
+                            state.params = state.params.withValue(param.key, value)
+                        },
+                        onReset = {
+                            state.params = state.params.withValue(
+                                param.key,
+                                spec.defaultParams.valueOf(param.key)
+                            )
+                        }
+                    )
+                }
+
+                if (supportsChromatic(spec.kind)) {
+                    ToggleRow(
+                        label = "Chromatic",
+                        checked = state.params.chromaticAberration,
+                        defaultChecked = spec.defaultParams.chromaticAberration,
+                        accent = spec.accent,
+                        onCheckedChange = {
+                            state.params = state.params.copy(chromaticAberration = it)
+                        },
+                        onReset = {
+                            state.params = state.params.copy(
+                                chromaticAberration = spec.defaultParams.chromaticAberration
+                            )
+                        }
+                    )
+                }
             }
         }
-
-        SectionLabel("Glass")
-        ParamSlider(
-            label = "Blur",
-            value = state.params.blur,
-            range = 0f..18f,
-            suffix = "dp",
-            accent = spec.accent,
-            onValueChange = { state.params = state.params.copy(blur = it) }
-        )
-        ParamSlider(
-            label = "Lens height",
-            value = state.params.lensHeight,
-            range = 0f..36f,
-            suffix = "dp",
-            accent = spec.accent,
-            onValueChange = { state.params = state.params.copy(lensHeight = it) }
-        )
-        ParamSlider(
-            label = "Lens amount",
-            value = state.params.lensAmount,
-            range = 0f..64f,
-            suffix = "dp",
-            accent = spec.accent,
-            onValueChange = { state.params = state.params.copy(lensAmount = it) }
-        )
-        ParamSlider(
-            label = "Saturation",
-            value = state.params.saturation,
-            range = 0.5f..2.2f,
-            suffix = "x",
-            accent = spec.accent,
-            onValueChange = { state.params = state.params.copy(saturation = it) }
-        )
-        ParamSlider(
-            label = "Surface",
-            value = state.params.surfaceAlpha,
-            range = 0f..1f,
-            suffix = "",
-            accent = spec.accent,
-            onValueChange = { state.params = state.params.copy(surfaceAlpha = it) }
-        )
-        ParamSlider(
-            label = "Tint",
-            value = state.params.tintAlpha,
-            range = 0f..1f,
-            suffix = "",
-            accent = spec.accent,
-            onValueChange = { state.params = state.params.copy(tintAlpha = it) }
-        )
-        ParamSlider(
-            label = "Corner",
-            value = state.params.corner,
-            range = 12f..60f,
-            suffix = "dp",
-            accent = spec.accent,
-            onValueChange = { state.params = state.params.copy(corner = it) }
-        )
-        ParamSlider(
-            label = "Shadow",
-            value = state.params.shadowAlpha,
-            range = 0f..0.24f,
-            suffix = "",
-            accent = spec.accent,
-            onValueChange = { state.params = state.params.copy(shadowAlpha = it) }
-        )
-
-        ToggleRow(
-            label = "Chromatic",
-            checked = state.params.chromaticAberration,
-            accent = spec.accent,
-            onCheckedChange = {
-                state.params = state.params.copy(chromaticAberration = it)
-            }
-        )
-
     }
 }
 
@@ -1134,26 +1135,39 @@ private fun ParameterPanel(
 private fun ParamSlider(
     label: String,
     value: Float,
+    defaultValue: Float,
     range: ClosedFloatingPointRange<Float>,
     suffix: String,
     accent: Color,
-    onValueChange: (Float) -> Unit
+    onValueChange: (Float) -> Unit,
+    onReset: () -> Unit
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+    val fraction = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
+    val changed = abs(value - defaultValue) > 0.001f
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             AppText(label, size = 13, weight = FontWeight.Medium, color = Ink)
-            AppText(value.displayValue(suffix), size = 12, color = MutedInk)
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (changed) {
+                    InlineAction("Default", accent, onReset)
+                }
+                AppText(value.displayValue(suffix), size = 12, weight = FontWeight.Medium, color = MutedInk)
+            }
         }
         BoxWithConstraints(
             Modifier
                 .fillMaxWidth()
-                .height(28.dp)
+                .height(40.dp)
                 .pointerInput(range) {
-                    val thumbRadiusPx = 9.dp.toPx()
+                    val thumbRadiusPx = 10.dp.toPx()
                     fun update(x: Float) {
                         val trackWidth = (size.width.toFloat() - thumbRadiusPx * 2f).coerceAtLeast(1f)
                         val fraction = ((x - thumbRadiusPx) / trackWidth).coerceIn(0f, 1f)
@@ -1163,7 +1177,7 @@ private fun ParamSlider(
                     detectTapGestures { offset -> update(offset.x) }
                 }
                 .pointerInput(range) {
-                    val thumbRadiusPx = 9.dp.toPx()
+                    val thumbRadiusPx = 10.dp.toPx()
                     detectDragGestures { change, _ ->
                         val trackWidth = (size.width.toFloat() - thumbRadiusPx * 2f).coerceAtLeast(1f)
                         val fraction = ((change.position.x - thumbRadiusPx) / trackWidth).coerceIn(0f, 1f)
@@ -1173,12 +1187,11 @@ private fun ParamSlider(
                 },
             contentAlignment = Alignment.Center
         ) {
-            val fraction = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
             Canvas(
                 Modifier
                     .fillMaxWidth()
-                    .height(6.dp)
-                    .padding(horizontal = 9.dp)
+                    .height(8.dp)
+                    .padding(horizontal = 10.dp)
             ) {
                 val radius = size.height / 2f
                 drawRoundRect(
@@ -1194,15 +1207,15 @@ private fun ParamSlider(
             Box(
                 Modifier
                     .offset {
-                        val thumb = 18.dp.roundToPx()
+                        val thumb = 20.dp.roundToPx()
                         val trackWidth = (constraints.maxWidth - thumb).coerceAtLeast(1)
                         val x = (trackWidth * fraction).roundToInt()
                         IntOffset(x.coerceIn(0, trackWidth), 0)
                     }
-                    .size(18.dp)
+                    .size(20.dp)
                     .clip(RoundedCornerShape(999.dp))
                     .background(Color.White)
-                    .border(1.dp, accent.copy(alpha = 0.55f), RoundedCornerShape(999.dp))
+                    .border(2.dp, accent.copy(alpha = 0.72f), RoundedCornerShape(999.dp))
             )
         }
     }
@@ -1212,8 +1225,10 @@ private fun ParamSlider(
 private fun ToggleRow(
     label: String,
     checked: Boolean,
+    defaultChecked: Boolean,
     accent: Color,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    onReset: () -> Unit
 ) {
     Row(
         Modifier.fillMaxWidth(),
@@ -1221,24 +1236,32 @@ private fun ToggleRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         AppText(label, size = 13, weight = FontWeight.Medium, color = Ink)
-        Box(
-            Modifier
-                .size(54.dp, 30.dp)
-                .clip(RoundedCornerShape(999.dp))
-                .background(if (checked) accent.copy(alpha = 0.82f) else Color.Black.copy(alpha = 0.12f))
-                .clickable(
-                    interactionSource = null,
-                    indication = null
-                ) { onCheckedChange(!checked) }
-                .padding(3.dp),
-            contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            if (checked != defaultChecked) {
+                InlineAction("Default", accent, onReset)
+            }
             Box(
                 Modifier
-                    .size(24.dp)
+                    .size(54.dp, 30.dp)
                     .clip(RoundedCornerShape(999.dp))
-                    .background(Color.White)
-            )
+                    .background(if (checked) accent.copy(alpha = 0.82f) else Color.Black.copy(alpha = 0.12f))
+                    .clickable(
+                        interactionSource = null,
+                        indication = null
+                    ) { onCheckedChange(!checked) }
+                    .padding(3.dp),
+                contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
+            ) {
+                Box(
+                    Modifier
+                        .size(24.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(Color.White)
+                )
+            }
         }
     }
 }
@@ -1251,6 +1274,70 @@ private fun SectionLabel(text: String) {
         weight = FontWeight.Bold,
         color = MutedInk.copy(alpha = 0.76f)
     )
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        SectionLabel(text)
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(1.dp)
+                .background(Hairline)
+        )
+    }
+}
+
+@Composable
+private fun InlineAction(
+    label: String,
+    accent: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(999.dp))
+            .clickable(
+                interactionSource = null,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 7.dp, vertical = 4.dp)
+    ) {
+        AppText(label, size = 11, weight = FontWeight.SemiBold, color = accent)
+    }
+}
+
+@Composable
+private fun PanelActionButton(
+    label: String,
+    accent: Color,
+    selected: Boolean = false,
+    onClick: () -> Unit
+) {
+    val shape = RoundedCornerShape(999.dp)
+    Box(
+        Modifier
+            .clip(shape)
+            .background(if (selected) accent else Color.White.copy(alpha = 0.64f))
+            .border(1.dp, if (selected) accent.copy(alpha = 0.18f) else Hairline, shape)
+            .clickable(
+                interactionSource = null,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        AppText(
+            text = label,
+            size = 12,
+            weight = FontWeight.SemiBold,
+            color = if (selected) Color.White else Ink,
+            maxLines = 1
+        )
+    }
 }
 
 @Composable
@@ -1353,6 +1440,103 @@ private fun Modifier.glassSurface(
             }
         }
     )
+}
+
+private fun activeParamSpecs(kind: ControlKind): List<ParamSpec> {
+    return when (kind) {
+        ControlKind.Button -> listOf(
+            ParamSpec(ParamKey.Blur, "Blur", 0f..18f, "dp"),
+            ParamSpec(ParamKey.LensHeight, "Lens height", 0f..36f, "dp"),
+            ParamSpec(ParamKey.LensAmount, "Lens amount", 0f..64f, "dp"),
+            ParamSpec(ParamKey.Surface, "Surface", 0f..1f, "")
+        )
+
+        ControlKind.TintedButton -> listOf(
+            ParamSpec(ParamKey.Blur, "Blur", 0f..18f, "dp"),
+            ParamSpec(ParamKey.LensHeight, "Lens height", 0f..36f, "dp"),
+            ParamSpec(ParamKey.LensAmount, "Lens amount", 0f..64f, "dp"),
+            ParamSpec(ParamKey.Tint, "Tint", 0f..1f, "")
+        )
+
+        ControlKind.Toggle,
+        ControlKind.Slider,
+        ControlKind.BottomTabs -> listOf(
+            ParamSpec(ParamKey.Blur, "Blur", 0f..18f, "dp"),
+            ParamSpec(ParamKey.LensHeight, "Lens height", 0f..36f, "dp"),
+            ParamSpec(ParamKey.LensAmount, "Lens amount", 0f..64f, "dp"),
+            ParamSpec(ParamKey.Surface, "Surface", 0f..1f, "")
+        )
+
+        ControlKind.BottomBar -> listOf(
+            ParamSpec(ParamKey.Blur, "Blur", 0f..18f, "dp"),
+            ParamSpec(ParamKey.LensHeight, "Lens height", 0f..36f, "dp"),
+            ParamSpec(ParamKey.LensAmount, "Lens amount", 0f..64f, "dp"),
+            ParamSpec(ParamKey.Surface, "Surface", 0f..1f, ""),
+            ParamSpec(ParamKey.Tint, "Tint", 0f..1f, ""),
+            ParamSpec(ParamKey.Shadow, "Shadow", 0f..0.24f, "")
+        )
+
+        ControlKind.BottomSheet,
+        ControlKind.Dialog -> listOf(
+            ParamSpec(ParamKey.Blur, "Blur", 0f..18f, "dp"),
+            ParamSpec(ParamKey.LensHeight, "Lens height", 0f..64f, "dp"),
+            ParamSpec(ParamKey.LensAmount, "Lens amount", 0f..80f, "dp"),
+            ParamSpec(ParamKey.Surface, "Surface", 0f..1f, ""),
+            ParamSpec(ParamKey.Tint, "Tint", 0f..1f, ""),
+            ParamSpec(ParamKey.Corner, "Corner", 12f..64f, "dp"),
+            ParamSpec(ParamKey.Shadow, "Shadow", 0f..0.24f, ""),
+            ParamSpec(ParamKey.Saturation, "Saturation", 0.5f..2.2f, "x")
+        )
+
+        ControlKind.Magnifier -> listOf(
+            ParamSpec(ParamKey.LensHeight, "Lens height", 0f..64f, "dp"),
+            ParamSpec(ParamKey.LensAmount, "Lens amount", 0f..96f, "dp"),
+            ParamSpec(ParamKey.Surface, "Surface", 0f..1f, ""),
+            ParamSpec(ParamKey.Corner, "Corner", 12f..72f, "dp"),
+            ParamSpec(ParamKey.Shadow, "Shadow", 0f..0.24f, "")
+        )
+    }
+}
+
+private fun supportsChromatic(kind: ControlKind): Boolean {
+    return when (kind) {
+        ControlKind.Button,
+        ControlKind.TintedButton -> false
+
+        ControlKind.Toggle,
+        ControlKind.Slider,
+        ControlKind.BottomTabs,
+        ControlKind.BottomBar,
+        ControlKind.BottomSheet,
+        ControlKind.Dialog,
+        ControlKind.Magnifier -> true
+    }
+}
+
+private fun GlassParams.valueOf(key: ParamKey): Float {
+    return when (key) {
+        ParamKey.Blur -> blur
+        ParamKey.LensHeight -> lensHeight
+        ParamKey.LensAmount -> lensAmount
+        ParamKey.Surface -> surfaceAlpha
+        ParamKey.Tint -> tintAlpha
+        ParamKey.Corner -> corner
+        ParamKey.Shadow -> shadowAlpha
+        ParamKey.Saturation -> saturation
+    }
+}
+
+private fun GlassParams.withValue(key: ParamKey, value: Float): GlassParams {
+    return when (key) {
+        ParamKey.Blur -> copy(blur = value)
+        ParamKey.LensHeight -> copy(lensHeight = value)
+        ParamKey.LensAmount -> copy(lensAmount = value)
+        ParamKey.Surface -> copy(surfaceAlpha = value)
+        ParamKey.Tint -> copy(tintAlpha = value)
+        ParamKey.Corner -> copy(corner = value)
+        ParamKey.Shadow -> copy(shadowAlpha = value)
+        ParamKey.Saturation -> copy(saturation = value)
+    }
 }
 
 private fun controlSpecs(): List<ControlSpec> {
